@@ -1,0 +1,17 @@
+%% To be changed when create a new server
+{application,t,
+ [{description, "template for application servers"},
+  {vsn, "0.1.0"},
+  {registered, []},
+%% To be changed when create a new server
+  {mod, {t_app, []}},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.
