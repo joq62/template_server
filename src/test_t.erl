@@ -17,6 +17,7 @@
 %% Include files
 %% --------------------------------------------------------------------
 -include("log.api").
+-define(Appl,t).
 
 %%%===================================================================
 %%% API
@@ -41,10 +42,10 @@ start()->
 test_template()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
 
-    pong=t:ping(),
+    pong=?Appl:ping(),
     {Y,M,D}=date(),
-    {ok,Y,M,D}=t:template_call(args),
-    ok=t:template_cast(args),
+    {ok,Y,M,D}=?Appl:template_call(args),
+    ok=?Appl:template_cast(args),
     
     ok.
 
