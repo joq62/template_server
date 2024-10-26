@@ -30,8 +30,8 @@ init([]) ->
                  intensity => 0,
                  period => 1},
     ChildSpecs = [
-%		  #{id =>t,               
-%		    start => {t,start_link,[]}}
+		  #{id =>t,               
+		    start => {t,start_link,[]}}
 		 ],
     {ok, {SupFlags, ChildSpecs}}.
 
