@@ -17,7 +17,8 @@ all:
 	rebar3 compile;
 	rm -rf _build;
 	rm -rf common_include;
-	rm -rf rebar.lock
+	rm -rf rebar.lock;
+	rm -rf rebar.config;
 	git status
 	echo Ok there you go!
 	#INFO: no_ebin_commit ENDED SUCCESSFUL
@@ -40,6 +41,7 @@ clean:
 	rebar3 compile;
 	rm -rf _build;
 	rm -rf common_include;
+	rm -rf rebar.config;
 	rm -rf rebar.lock
 #INFO: clean ENDED SUCCESSFUL
 eunit: 
@@ -56,6 +58,7 @@ eunit:
 	rm -rf *_specs;
 #INFO: Creating eunit test code using test_ebin dir;
 	rm -rf common_include;
+	rm -rf rebar.config;
 	cp -r ~/erlang/common_include .
 	mkdir test_ebin;
 	cp test_config/test.rebar.config rebar.config;
