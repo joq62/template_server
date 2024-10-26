@@ -16,6 +16,7 @@ all:
 	cp config/rebar.config .;
 	rebar3 compile;
 	rm -rf _build;
+	rm -rf common_include;
 	rm -rf rebar.lock
 	git status
 	echo Ok there you go!
@@ -38,6 +39,7 @@ clean:
 	cp -r ~/erlang/common_include .
 	rebar3 compile;
 	rm -rf _build;
+	rm -rf common_include;
 	rm -rf rebar.lock
 #INFO: clean ENDED SUCCESSFUL
 eunit: 
