@@ -8,6 +8,9 @@
  
 -export([start/0]).
 
+-define(Appl,t).
+-define(TestAppl,test_t).
+
 %%---------------------------------------------------------------------
 %% Include files
 %% --------------------------------------------------------------------
@@ -21,7 +24,7 @@
 start()->
    
     ok=setup(),
-    ok=test_t:start(),
+    ok=?TestAppl:start(),
    
     io:format("Test OK !!! ~p~n",[?MODULE]),
     timer:sleep(2000),
@@ -36,13 +39,9 @@ setup()->
     io:format("Start ~p~n",[{?MODULE,?FUNCTION_NAME,?LINE}]),
   
     ok=application:start(test_appl),
-    timer:sleep(2000),
-    application:which_applications(),
-    
     pong=log:ping(),
     pong=rd:ping(),
-
     %% To be changed when create a new server
-    pong=t:ping(),
+    pong=?Appl:ping(),
 
     ok.

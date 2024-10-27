@@ -70,7 +70,7 @@ eunit:
 	 -pa _build/default/lib/log/ebin\
 	 -pa _build/default/lib/rd/ebin\
 	 -pa _build/default/lib/common/ebin\
-	 -pa _build/default/lib/$(a)/ebin\
+	 -pa _build/default/lib/$(appl)/ebin\
 	 -sname test_appl\
 	 -run $(m) start\
 	 -setcookie a
