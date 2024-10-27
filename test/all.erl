@@ -7,6 +7,13 @@
 -module(all).       
  
 -export([start/0]).
+%%---------- Log
+-define(MainLogDir,"logs").
+-define(LocalLogDir,"log.logs").
+-define(LogFile,"test_logfile").
+-define(MaxNumFiles,10).
+-define(MaxNumBytes,100000).
+
 
 -define(Appl,t).
 -define(TestAppl,test_t).
@@ -40,6 +47,12 @@ setup()->
   
     ok=application:start(test_appl),
     pong=log:ping(),
+    %% Fix log
+    file:del_dir_r(?MainLogDir),
+    file:make_dir(?MainLogDir),
+    [NodeName,_HostName]=string:tokens(atom_to_list(node()),"@"),
+    NodeNodeLogDir=filename:join(?MainLogDir,NodeName),
+    ok=log:create_logger(NodeNodeLogDir,?LocalLogDir,?LogFile,?MaxNumFiles,?MaxNumBytes),
     pong=rd:ping(),
     %% To be changed when create a new server
     pong=?Appl:ping(),
