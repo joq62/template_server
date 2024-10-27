@@ -34,8 +34,12 @@ init([]) ->
 		    start=>{log,start_link,[]}},
 		  #{id=>rd,
 		    start=>{rd,start_link,[]}},
+
 		   #{id=>t,
-		    start=>{t,start_link,[]}}
+		    start=>{t,start_link,[]}},
+
+		  #{id=>test_t,
+		    start=>{test_t,start_link,[]}}
 		 ],
     {ok, {SupFlags, ChildSpecs}}.
 
