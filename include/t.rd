@@ -4,4 +4,4 @@
 -define(LocalResourceTuples,[{t,{t,node()}}]).
 
 %% I want following resource types
--define(TargetTypes,[]). 
+-define(TargetTypes,[add_test,kvs_test]). 
