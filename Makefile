@@ -10,6 +10,7 @@ all:
 	rm -rf ebin;
 	rm -rf rebar.lock;
 	rm -rf *_specs;
+	rm -rf *_container;
 	#INFO: Compile application
 	rm -rf common_include;
 	cp -r ~/erlang/common_include .
@@ -34,6 +35,7 @@ clean:
 	rm -rf ebin;
 	rm -rf rebar.lock;
 	rm -rf *_specs;
+	rm -rf *_container;
 	#INFO: Compile application
 	cp config/rebar.config .;
 	rm -rf common_include;
@@ -56,6 +58,7 @@ eunit:
 	rm -rf ebin;
 	rm -rf rebar.lock;
 	rm -rf *_specs;
+	rm -rf *_container;
 #INFO: Creating eunit test code using test_ebin dir;
 	rm -rf common_include;
 	rm -rf rebar.config;
@@ -74,3 +77,10 @@ eunit:
 	 -sname test_appl\
 	 -run $(m) start\
 	 -setcookie a
+
+info:
+	# When adding a service for testing
+	# DO: test/test_appl_sup.erl add the wanted server #{id=>extra_server, start=>{extra_server,start_link,[]}},
+	# DO: test_config/test.rebar.config add {extra_server,{git,"https://github.com/joq62/extra_server.git",{branch,"main"}}},
+	# DO: test/all.erl add in setup function pong=extra_server.ping()
+	# DO: Makefile add  -pa _build/default/lib/extra_server/ebin\

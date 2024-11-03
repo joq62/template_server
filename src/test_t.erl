@@ -139,16 +139,37 @@ handle_info(timeout, State) ->
     {ok,Y,M,D}=?Appl:template_call(args),
     ok=?Appl:template_cast(args),
 
-    initial_trade_resources(),
 
+    %%-------- Initial testing access to ctrl node and needed applications
+
+    CtrlNode=lib_vm:get_node("ctrl"),
+    case net_adm:ping(CtrlNode) of
+	pang->
+	    ?LOG_WARNING("Error Control node ctrl is not available ",[CtrlNode]);
+	pong->
+	    initial_trade_resources(),
+	    TargetTypes=rd_store:get_target_resource_types(),
+	    ActiveTargetTypes=[{error,TargetType}||TargetType<-TargetTypes,
+						   []=:=rd:fetch_resources(TargetType)],
+	    case ActiveTargetTypes of
+		[]->
+		    ?LOG_NOTICE("All needed target types are availablel",[TargetTypes]);		    
+		Error ->
+		    ?LOG_WARNING("Error Target types missing ",[Error])
+	    end
+    end,
+    
     Self=self(),
     spawn_link(fun()->rd_loop(Self) end),
     {noreply, State};
 
 handle_info(rd_loop_timeout, State) ->
-    io:format("rd_loop_timeout ~p~n",[{?MODULE,?LINE}]),
-    rd:trade_resources(),
-    timer:sleep(3000),
+    ?LOG_NOTICE("DBG",[]),	
+    Self=self(),
+    spawn_link(fun()->rd_loop(Self) end),
+    {noreply, State};
+
+handle_info({'EXIT',_Pid,normal}, State) ->
     {noreply, State};
 
 handle_info(Info, State) ->
@@ -199,16 +220,29 @@ format_status(_Opt, Status) ->
 %%% Internal functions
 %%%===================================================================
 rd_loop(Parent)->
+    CtrlNode=lib_vm:get_node("ctrl"),
+    net_adm:ping(CtrlNode),
+  %  [rd:add_local_resource(ResourceType,Resource)||{ResourceType,Resource}<-?LocalResourceTuples],
+  %  [rd:add_target_resource_type(TargetType)||TargetType<-?TargetTypes],
+    rd:trade_resources(),
+    timer:sleep(5000),
+    TargetTypes=rd_store:get_target_resource_types(),
+    ActiveTargetTypes=[{error,TargetType}||TargetType<-TargetTypes,
+					   []=:=rd:fetch_resources(TargetType)],
+    case ActiveTargetTypes of
+		[]->
+	    ?LOG_NOTICE("All needed target types are availablel",[TargetTypes]);		    
+	Error ->
+	    ?LOG_WARNING("Error Target types missing ",[Error])
+    end,
     timer:sleep(?RdTradeInterval),
-    Parent!rd_loop_timeout,
-    rd_loop(Parent).
+    Parent!rd_loop_timeout.
 
 
 initial_trade_resources()->
     [rd:add_local_resource(ResourceType,Resource)||{ResourceType,Resource}<-?LocalResourceTuples],
     [rd:add_target_resource_type(TargetType)||TargetType<-?TargetTypes],
-
-%    [rd:add_local_resource(ResourceType,Resource)||{ResourceType,Resource}<-[]],
-%    [rd:add_target_resource_type(TargetType)||TargetType<-[]],
+    rd:trade_resources(),
+    timer:sleep(3000),
     rd:trade_resources(),
     timer:sleep(3000).
