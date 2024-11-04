@@ -12,7 +12,9 @@
 
 -include("log.api").
 
+-include("t.hrl").
 -include("t.rd").
+
 -define(Appl,t).
 
 %% API
@@ -26,9 +28,11 @@
 	 terminate/2, code_change/3, format_status/2]).
 
 -define(SERVER, ?MODULE).
--define(RdTradeInterval,60*1000).
 
--record(state, {}).
+-record(state, {
+		control_node_active,
+		target_resources_status
+	       }).
 
 %%%===================================================================
 %%% API
@@ -74,8 +78,10 @@ init([]) ->
     process_flag(trap_exit, true),
     
 
-    {ok, #state{},
-     0}.
+    {ok, #state{
+	    control_node_active=false,
+	    target_resources_status=[]
+	   },0}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -142,32 +148,90 @@ handle_info(timeout, State) ->
 
     %%-------- Initial testing access to ctrl node and needed applications
 
-    CtrlNode=lib_vm:get_node("ctrl"),
-    case net_adm:ping(CtrlNode) of
-	pang->
-	    ?LOG_WARNING("Error Control node ctrl is not available ",[CtrlNode]);
-	pong->
-	    initial_trade_resources(),
-	    TargetTypes=rd_store:get_target_resource_types(),
-	    ActiveTargetTypes=[{error,TargetType}||TargetType<-TargetTypes,
-						   []=:=rd:fetch_resources(TargetType)],
-	    case ActiveTargetTypes of
-		[]->
-		    ?LOG_NOTICE("All needed target types are availablel",[TargetTypes]);		    
-		Error ->
-		    ?LOG_WARNING("Error Target types missing ",[Error])
-	    end
-    end,
+    CtrlNode=lib_vm:get_node(?ControlNodeName),
+    NewControlStatus=case net_adm:ping(CtrlNode) of
+			 pang->
+			     ?LOG_WARNING("Error Control node ctrl is not available ",[CtrlNode]),
+			     false; 
+			 pong->
+			     ?LOG_NOTICE("Control node ctrl is availablel",[CtrlNode]),
+			     true
+		     end,
     
+    initial_trade_resources(),
+    TargetTypes=rd_store:get_target_resource_types(),
+    NonActiveTargetTypes=lists:sort([TargetType||TargetType<-TargetTypes,
+						 []=:=rd:fetch_resources(TargetType)]),
+    TargetStatus=State#state.target_resources_status,
+    NewTargetStatus=if 
+			TargetStatus=:=NonActiveTargetTypes->
+			    NonActiveTargetTypes;
+			true->
+			    case NonActiveTargetTypes of
+				[]->
+				    ?LOG_NOTICE("All needed target types are availablel",[TargetTypes]);	    
+				Error ->
+				    ?LOG_WARNING("Error Target types missing ",[Error])
+			    end,
+			    NonActiveTargetTypes
+		    end,
+    NewState=State#state{target_resources_status=NewTargetStatus,
+			 control_node_active=NewControlStatus},	    
     Self=self(),
     spawn_link(fun()->rd_loop(Self) end),
-    {noreply, State};
+    {noreply, NewState};
 
 handle_info(rd_loop_timeout, State) ->
-    ?LOG_NOTICE("DBG",[]),	
+    CtrlNode=lib_vm:get_node(?ControlNodeName),
+    Pong=net_adm:ping(CtrlNode),
+    NewControlStatus=case net_adm:ping(CtrlNode) of
+			 pang->
+			     case State#state.control_node_active of
+				 false->
+				     false;
+				 true->
+				     ?LOG_WARNING("Error Control node ctrl is not available ",[CtrlNode]),
+				     false
+			     end; 
+			 pong->
+			     case State#state.control_node_active of
+				 true->
+				     true;
+				 false->
+				     ?LOG_NOTICE("Control node ctrl is availablel",[CtrlNode]),
+				     true
+			     end
+		     end,
+    TargetTypes=rd_store:get_target_resource_types(),
+    NonActiveTargetTypes=lists:sort([TargetType||TargetType<-TargetTypes,
+						 []=:=rd:fetch_resources(TargetType)]),
+    
+    TargetStatus=State#state.target_resources_status,
+  %  io:format("--------------------------------------------------------- ~n"),
+  %  io:format("State#state.control_node_active  ~p~n",[{State#state.control_node_active ,?MODULE,?LINE}]),
+   % io:format("Pong ~p~n",[{Pong,?MODULE,?LINE}]),
+
+   % io:format("TargetTypes ~p~n",[{TargetTypes,?MODULE,?LINE}]),
+   % io:format("TargetStatus ~p~n",[{TargetStatus,?MODULE,?LINE}]),
+   % io:format("NonActiveTargetTypes ~p~n",[{NonActiveTargetTypes,?MODULE,?LINE}]),
+
+    NewTargetStatus=if 
+			TargetStatus=:=NonActiveTargetTypes->
+			    NonActiveTargetTypes;
+			true->
+			    case NonActiveTargetTypes of
+				[]->
+				    ?LOG_NOTICE("All needed target types are availablel",[TargetTypes]);	    
+				Error ->
+				    ?LOG_WARNING("Error Target types missing ",[Error])
+			    end,
+			    NonActiveTargetTypes
+		    end,
+    NewState=State#state{target_resources_status=NewTargetStatus,
+			 control_node_active=NewControlStatus},	    
     Self=self(),
     spawn_link(fun()->rd_loop(Self) end),
-    {noreply, State};
+    {noreply, NewState};
 
 handle_info({'EXIT',_Pid,normal}, State) ->
     {noreply, State};
@@ -225,16 +289,6 @@ rd_loop(Parent)->
   %  [rd:add_local_resource(ResourceType,Resource)||{ResourceType,Resource}<-?LocalResourceTuples],
   %  [rd:add_target_resource_type(TargetType)||TargetType<-?TargetTypes],
     rd:trade_resources(),
-    timer:sleep(5000),
-    TargetTypes=rd_store:get_target_resource_types(),
-    ActiveTargetTypes=[{error,TargetType}||TargetType<-TargetTypes,
-					   []=:=rd:fetch_resources(TargetType)],
-    case ActiveTargetTypes of
-		[]->
-	    ?LOG_NOTICE("All needed target types are availablel",[TargetTypes]);		    
-	Error ->
-	    ?LOG_WARNING("Error Target types missing ",[Error])
-    end,
     timer:sleep(?RdTradeInterval),
     Parent!rd_loop_timeout.
 
