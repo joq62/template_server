@@ -15,7 +15,11 @@
 -include("t.hrl").
 -include("t.rd").
 
+
+
 -define(Appl,t).
+
+
 
 %% API
 
@@ -146,6 +150,14 @@ handle_info(timeout, State) ->
     ok=?Appl:template_cast(args),
 
 
+
+  %% Fix log
+    file:del_dir_r(?MainLogDir),
+    file:make_dir(?MainLogDir),
+    [NodeName,_HostName]=string:tokens(atom_to_list(node()),"@"),
+    NodeNodeLogDir=filename:join(?MainLogDir,NodeName),
+    ok=log:create_logger(NodeNodeLogDir,?LocalLogDir,?LogFile,?MaxNumFiles,?MaxNumBytes),
+    
     %%-------- Initial testing access to ctrl node and needed applications
 
     CtrlNode=lib_vm:get_node(?ControlNodeName),
@@ -183,7 +195,7 @@ handle_info(timeout, State) ->
 
 handle_info(rd_loop_timeout, State) ->
     CtrlNode=lib_vm:get_node(?ControlNodeName),
-    Pong=net_adm:ping(CtrlNode),
+    _Pong=net_adm:ping(CtrlNode),
     NewControlStatus=case net_adm:ping(CtrlNode) of
 			 pang->
 			     case State#state.control_node_active of
@@ -207,14 +219,6 @@ handle_info(rd_loop_timeout, State) ->
 						 []=:=rd:fetch_resources(TargetType)]),
     
     TargetStatus=State#state.target_resources_status,
-  %  io:format("--------------------------------------------------------- ~n"),
-  %  io:format("State#state.control_node_active  ~p~n",[{State#state.control_node_active ,?MODULE,?LINE}]),
-   % io:format("Pong ~p~n",[{Pong,?MODULE,?LINE}]),
-
-   % io:format("TargetTypes ~p~n",[{TargetTypes,?MODULE,?LINE}]),
-   % io:format("TargetStatus ~p~n",[{TargetStatus,?MODULE,?LINE}]),
-   % io:format("NonActiveTargetTypes ~p~n",[{NonActiveTargetTypes,?MODULE,?LINE}]),
-
     NewTargetStatus=if 
 			TargetStatus=:=NonActiveTargetTypes->
 			    NonActiveTargetTypes;
@@ -286,8 +290,6 @@ format_status(_Opt, Status) ->
 rd_loop(Parent)->
     CtrlNode=lib_vm:get_node("ctrl"),
     net_adm:ping(CtrlNode),
-  %  [rd:add_local_resource(ResourceType,Resource)||{ResourceType,Resource}<-?LocalResourceTuples],
-  %  [rd:add_target_resource_type(TargetType)||TargetType<-?TargetTypes],
     rd:trade_resources(),
     timer:sleep(?RdTradeInterval),
     Parent!rd_loop_timeout.
